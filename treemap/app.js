@@ -151,8 +151,10 @@ const resizeHandler = () => {
 };
 
 function app(data, config) {
+  var transitioning;
   var tooltipShow = config.tooltipShow;
   var legendShow = config.legendShow;
+  var paletteName = "brown";
   // title settings
   const titleConfig = {
     titleShow: config?.title?.show,
@@ -195,13 +197,100 @@ function app(data, config) {
   var width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
-  var color = d3.scaleOrdinal().range(
-    d3.schemeCategory10.map(function (c) {
+  /**
+   * Custom design settings
+   * @designer Ehsan Ezzati
+   * @author Ehsan Ghaffar
+   */
+
+  // fonts and typography
+  var typography = {
+    fontFamily: "Plus Jakarta Sans",
+    titleFontSize: "18px",
+    subtitleFontSize: "16px",
+    legendFontSize: "14px",
+    textFontSize: "14px",
+    tooltipFontSize: "14px",
+    axisFontSize: "12px",
+  };
+
+  const colorList = {
+    // Monochrome with tints Colors
+    monochrome: [
+      "#0061F7",
+      "#1973FF",
+      "#3A87FF",
+      "#5B9BFF",
+      "#7CAFFF",
+      "#9CC3FF",
+      "#BDD7FF",
+      "#DEEBFF",
+    ],
+    // soft pastel colors
+    softPastel: [
+      "#516B91",
+      "#59C4E6",
+      "#EDAFDA",
+      "#93B7E3",
+      "#A5E7F0",
+      "#CBB0E3",
+      "#D6E3B0",
+      "#E3B0B0",
+    ],
+    // Special bold colors
+    specialBold: [
+      "#C12E34",
+      "#E6B600",
+      "#0098D9",
+      "#2B821D",
+      "#005EAA",
+      "#339CA8",
+      "#CDA819",
+      "#32A487",
+    ],
+    // Dim light palette
+    dimLight: [
+      "#2EC7C9",
+      "#B6A2DE",
+      "#5AB1EF",
+      "#FFB980",
+      "#D87A80",
+      "#8D98B3",
+      "#E5CF0D",
+      "#97B552",
+    ],
+    // Brown colors
+    brown: [
+      "#D87C7C",
+      "#919E8B",
+      "#D7AB82",
+      "#6E7074",
+      "#61A0A8",
+      "#EFA18D",
+      "#787464",
+      "#CC7E63",
+    ],
+  };
+
+  // choose color palette
+  function getColor(colorName) {
+    return colorList[colorName];
+  }
+  var colorPalette = getColor(paletteName);
+
+  // Soft Pastel color scale
+  var softPastelScheme = d3.scaleOrdinal().range(
+    colorPalette.map(function (c) {
       c = d3.rgb(c);
       c.opacity = 0.8;
       return c;
     })
   );
+
+  /* create x and y scales */
+  var x = d3.scaleLinear().domain([0, width]).range([0, width]);
+
+  var y = d3.scaleLinear().domain([0, height]).range([0, height]);
 
   var tooltip = d3
     .select("body")
@@ -210,11 +299,6 @@ function app(data, config) {
     .style("opacity", 0)
     .style("position", "absolute")
     .style("border-radius", "10px");
-
-  var myColor = d3
-    .scaleSequential()
-    .domain([1, 10])
-    .interpolator(d3.interpolateViridis);
 
   d3.select("#svg-container").selectAll("svg").remove();
 
@@ -232,15 +316,15 @@ function app(data, config) {
       "translate(" + svgProps.title.x + ", " + svgProps.title.y + ")"
     )
     .style("text-anchor", "middle");
-  if (!titleConfig.titleShow) {
+  if (titleConfig.titleShow) {
     titleGroup
       .append("text")
       .attr("id", "title")
       .attr("fill", titleConfig.titleColor)
       .style("font-weight", "bold")
-      // .text(titleConfig.title)
-      .text("Title")
-      .style("font-size", titleConfig.fontSize + "px")
+      .text(titleConfig.title)
+      .style("font-family", typography.fontFamily)
+      .style("font-size", typography.titleFontSize)
       .style("background-color", titleConfig.titleBackgroundColor)
       .style("font-weight", titleConfig.titleFontWeight);
   }
@@ -251,7 +335,7 @@ function app(data, config) {
       .attr("dy", "1.25em")
       .attr("fill", titleConfig.subtitleColor)
       .style("font-weight", "normal")
-      .style("font-size", ".8em")
+      .style("font-size", typography.subtitleFontSize)
       .text(titleConfig.subtitle);
   }
 
@@ -262,8 +346,6 @@ function app(data, config) {
       "transform",
       "translate(" + svgProps.margin.left + ", " + svgProps.margin.top + ")"
     );
-
-  // var chartLayer = svg.append("g").classed("chartLayer", true);
 
   main(data);
   cast(data);
@@ -290,8 +372,10 @@ function app(data, config) {
       return d.value1;
     });
 
+    // Initialize the Treemap
     var treemap = d3
       .treemap()
+      .tile(d3.treemapSquarify)
       .size([svgProps.innerWidth, svgProps.innerHeight])
       .padding(1)
       .round(true);
@@ -307,35 +391,19 @@ function app(data, config) {
         .data(allRoot.filter((d) => d.depth === 1))
         .enter()
         .append("g")
-        .each(function (d) {
-          if (d.depth === 1) {
-            d3.select(this).select("text").remove();
-          }
+        .attr("class", "parent");
+
+      // group data by parent
+      var parentNode = d3.select("svg").selectAll(".parent");
+      parentNode
+        .attr("width", function (d) {
+          return d.x1 - d.x0 + 10;
         })
-        .attr("class", "leaf")
-        .attr("transform", function (d) {
-          return "translate(" + d.x0 + "," + d.y0 + ")";
-        })
-        .each(function (d) {
-          const dep = d.depth;
-          if (d.depth === 0) {
-            d3.select(this)
-              .style("fill", "white")
-              // .style("stroke", "black")
-              // .style("stroke-width", "1px")
-              .attr("width", d.x1 - d.x0 + 10)
-              .attr("height", d.y1 - d.y0 + 10)
-              .attr("transform", "translate(-5, -5)");
-          }
-          if (dep === 1) {
-            d3.select(this).attr("class", "parent").style("fill", "white");
-          }
-          if (dep === 2) {
-            d3.select(this).attr("rx", 2).attr("ry", 2).style("opacity", 1);
-            // .attr("y", 1);
-          }
+        .attr("height", function (d) {
+          return d.y1 - d.y0 + 10;
         });
 
+      // var chartLayer = svg.append("g").classed("chartLayer", true);
       const leaf = leaves
         .selectAll("g")
         .data(function (d) {
@@ -343,36 +411,27 @@ function app(data, config) {
         })
         .enter()
         .append("g")
-        .attr("class", "leaf2")
+        .attr("class", "leaf")
         .attr("transform", function (d) {
           return "translate(" + d.x0 + "," + d.y0 + ")";
         });
-
       leaf
         .append("rect")
         .attr("class", "tile")
         .attr("width", (d) => d.x1 - d.x0)
         .attr("height", (d) => d.y1 - d.y0)
+        .style("stroke", "none")
         .attr("fill", function (d) {
           while (d.depth > 1) d = d.parent;
-          return color(d.id);
+          return d3.rgb(softPastelScheme(d.data.id)).brighter(0.5);
         });
 
-      var parentNode = d3.selectAll(".parent");
-      parentNode
-        .attr("width", function (d) {
-          return d.x1 - d.x0 + 10;
-        })
-        .attr("height", function (d) {
-          return d.y1 - d.y0 + 10;
-        })
-        .attr("transform", function (d) {
-          return "translate(-5, -5)";
-        });
       leaf
         .append("text")
         .text((d) => d.data.id.substring(d.data.id.lastIndexOf(".") + 1))
         .style("font-size", ".7em")
+        .style("fill", "black")
+        .style("stroke", "none")
         .each(function (d) {
           let w = d.x1 - d.x0;
           let h = d.y1 - d.y0;
@@ -383,6 +442,8 @@ function app(data, config) {
             .method("tspans");
           d3.select(this).call(wrap);
         });
+
+      // legend config
       const legend = svg.append("g").attr("id", "legend");
       if (legendShow) {
         legend
@@ -404,9 +465,9 @@ function app(data, config) {
           .attr("y", 0)
           .attr("height", svgProps.legend.squareSize)
           .attr("width", svgProps.legend.squareSize)
-          .attr("fill", (d) => color(d));
+          .attr("fill", (d) => softPastelScheme(d));
 
-        // Add text showing category types
+        // Add text to legend
         legend
           .selectAll("g.legend-item-group")
           .append("text")
@@ -424,40 +485,70 @@ function app(data, config) {
           return "translate(" + legendX + ", " + svgProps.legend.y + ")";
         });
       }
+
+      // Event listeners
       svg.selectAll(".tile").on("mouseover", mouseover);
       svg.selectAll(".tile").on("mousemove", mousemove);
       svg.selectAll(".tile").on("mouseout", mouseout);
-      // mouse events on rect
-      // on mouseover function
+
       function mouseover(d) {
-        const thisNode = d3.select(this).selectAll(".tile");
-        thisNode.style("opacity", 1);
-        console.log(thisNode);
+        const thisNode = d3.select(this);
+        const thisParent = thisNode.node().parentNode;
+        const thisParentNode = d3.select(thisParent);
+        const thisParentParent = thisParentNode.node().parentNode;
+        const thisParentParentNode = d3.select(thisParentParent);
+        thisNode.style("fill", function (d) {
+          return d3.rgb(d3.select(this).style("fill")).brighter(1);
+        });
+        thisParentParentNode
+          .append("rect")
+          .attr("class", "overlay")
+          .attr("width", function (d) {
+            return d.x1 - d.x0;
+          })
+          .attr("height", function (d) {
+            return d.y1 - d.y0;
+          })
+          .attr("x", function (d) {
+            return d.x0;
+          })
+          .attr("y", function (d) {
+            return d.y0;
+          })
+          .style("fill", "none")
+          .attr("stroke", function (d) {
+            return softPastelScheme(d.data.id).darker(1);
+          })
+          .attr("stroke-width", "2px")
+          .attr("rx", "2px")
+          .attr("ry", "2px");
         if (!tooltipShow) {
           showTooltip(d);
         }
+        // thisParentNode.selectAll("text").call(text).style("stroke", "none");
       }
 
-      // on mousemove function
       function mousemove() {
         tooltip
           .style("top", d3.event.pageY - 70 + "px")
-          .style("left", d3.event.pageX + 20 + "px");
+          .style("left", d3.event.pageX + 40 + "px");
       }
 
-      // on mouseout function
       function mouseout(d) {
-        const thisNode = d3.select(this).select("rect");
-
+        const thisNode = d3.select(this);
         tooltip.transition().duration(200).style("opacity", 0);
         tooltip.selectAll("*").remove();
-        thisNode.style("opacity", function (d) {
-          while (d.depth > 1) d = d.parent;
-          return 1;
+        const thisParent = thisNode.node().parentNode;
+        const thisParentNode = d3.select(thisParent);
+        const thisParentParent = thisParentNode.node().parentNode;
+        const thisParentParentNode = d3.select(thisParentParent);
+        thisParentParentNode.selectAll(".overlay").remove();
+        thisNode.style("fill", function (d) {
+          return;
         });
       }
 
-      // create tooltip card
+      // create tooltip content function
       function createCard(d) {
         var card = tooltip.append("div").attr("class", "card");
         card
@@ -465,7 +556,7 @@ function app(data, config) {
           .attr("class", "card-header text-white p-2")
           .style("background-color", () => {
             while (d.depth > 1) d = d.parent;
-            return color(d.id);
+            return softPastelScheme(d.id);
           })
           .text(`Title:${d.data.id}`)
           .style("font-size", ".9em");
@@ -484,7 +575,6 @@ function app(data, config) {
           .text(`Value 2: ${d.data.value2}`);
       }
 
-      // tooltip function
       function showTooltip(d) {
         tooltip.transition().duration(200).style("opacity", 1);
         createCard(d);
