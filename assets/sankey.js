@@ -1,3 +1,10 @@
+/**
+ * Sankey chart core module.
+ * @module Sankey
+ * @author Ehsan Ghaffar
+ * @version 1.0.0
+ */
+
 d3.sankey = function () {
   var sankey = {},
     nodeWidth = 24,
@@ -98,7 +105,6 @@ d3.sankey = function () {
       node.targetLinks = [];
     });
     links.forEach(function (link) {
-      console.log("link", link);
       var source = link.source,
         target = link.target;
       if (typeof source === "number") source = link.source = nodes[link.source];
