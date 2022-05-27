@@ -2,7 +2,7 @@
  * Sankey chart core module.
  * @module Sankey
  * @author Ehsan Ghaffar
- * @version 1.0.0
+ * @version 1.0.1
  */
 
 d3.sankey = function () {
@@ -122,10 +122,6 @@ d3.sankey = function () {
     });
   }
 
-  // Iteratively assign the breadth (x-position) for each node.
-  // Nodes are assigned the maximum breadth of incoming neighbors plus one;
-  // nodes with no incoming links are assigned breadth zero, while
-  // nodes with no outgoing links are assigned the maximum breadth.
   function computeNodeBreadths() {
     var remainingNodes = nodes,
       nextNodes,
