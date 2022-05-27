@@ -97,8 +97,6 @@ d3.sankey = function () {
     return link;
   };
 
-  // Populate the sourceLinks and targetLinks for each node.
-  // Also, if the source and target are not objects, assume they are indices.
   function computeNodeLinks() {
     nodes.forEach(function (node) {
       node.sourceLinks = [];
@@ -146,7 +144,6 @@ d3.sankey = function () {
       ++x;
     }
 
-    //
     moveSinksRight(x);
     scaleNodeBreadths((width - nodeWidth) / (x - 1));
   }
