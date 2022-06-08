@@ -2,8 +2,9 @@
  * Sankey chart core module.
  * @module Sankey
  * @author Ehsan Ghaffar
- * @version 1.2
+ * @version 1.2.1
  */
+
 d3.sankey = function () {
   var sankey = {},
     nodeWidth = 24,
@@ -98,6 +99,7 @@ d3.sankey = function () {
 
     function link(d) {
       if (d.causesCycle) {
+        return;
         // cycle node; reaches backward
 
         /*
