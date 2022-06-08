@@ -2,7 +2,7 @@
  * Sankey chart core module.
  * @module Sankey
  * @author Ehsan Ghaffar
- * @version 1.1
+ * @version 1.2
  */
 d3.sankey = function () {
   var sankey = {},
